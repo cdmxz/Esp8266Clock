@@ -7,7 +7,8 @@
 #define SERVO_2_PIN D2 // 舵机2引脚
 
 #define ANGLE_ON 0    // 开灯时舵机角度
-#define ANGLE_OFF 165  // 关灯时舵机角度
+#define ANGLE_1_OFF 165  // 关灯时舵机角度
+#define ANGLE_2_OFF 175  // 关灯时舵机角度
 #define ANGLE_NONE 70  // 置空时舵机角度
 
 #define AP_SSID "智能宿舍-5049" // esp8266创建的wifi的名称
@@ -20,6 +21,8 @@
 #define LIGHT_2_OFF_PARAMTER "/gpio/3"
 #define LIGHT_All_ON_PARAMTER "/gpio/4"
 #define LIGHT_All_OFF_PARAMTER "/gpio/5"
+
+char html[1280];
 
 const char h1[] = { "<!DOCTYPE html>"
     "<html lang=\"en\">"
@@ -41,7 +44,7 @@ const char h1[] = { "<!DOCTYPE html>"
     "<tr align=\"center\" bgcolor=\"#FFFFFF\" height=\"15\"></tr><tr align=\"center\" bgcolor=\"#FFFFFF\" height=\"10\">"
     "<td colspan=\"2\">灯2 状态：<font color=\"#EA7B21\">" };
 
-    char h3[] = { "</font>"
+   const char h3[] = { "</font>"
     "</td></tr><tr align=\"center\" bgcolor=\"#1E90FF\">"
     "<td width=\"100\"><a href=\""
     LIGHT_2_ON_PARAMTER
@@ -60,6 +63,8 @@ const char h1[] = { "<!DOCTYPE html>"
     "</table></body></html>"
     };
 
+  const char on_str[]={"开"};
+  const char off_str[]={"关"};
 
 // 灯的状态
 bool light_1_On = false;
@@ -82,16 +87,16 @@ void setup() {
   analogWriteRange(1000);     // 范围 1000， 占空比步长 1us
   analogWrite(LED_BUILTIN, 950); // esp8266是反过来的1000是暗，0是亮
   // 初始化舵机
-  servo_1.attach(SERVO_1_PIN);
+  servo_1.attach(SERVO_1_PIN,500,2500);
   servo_1.write(ANGLE_NONE); // 舵机角度初始化
-  servo_2.attach(SERVO_2_PIN);
+  servo_2.attach(SERVO_2_PIN,500,2500);
   servo_2.write(ANGLE_NONE); // 舵机角度初始化
   // 初始化WIFI
   WiFi.mode(WIFI_AP);// Ap模式
   WiFi.hostname("ESP8266-宿舍智能化");  // 设置ESP8266设备名
   WiFi.softAPConfig(apIp,apIp, IPAddress(255, 255, 255, 0));
-  if (WiFi.softAP(AP_SSID))// 无密码，开放式WIFI
-  //  if (WiFi.softAP(AP_SSID, AP_PWD))
+  //if (WiFi.softAP(AP_SSID))// 无密码，开放式WIFI
+  if (WiFi.softAP(AP_SSID, AP_PWD))
     Serial.println("Esp8266 SoftAp started successfully");
   else
     Serial.println("Esp8266 SoftAp started failed!");
@@ -128,10 +133,9 @@ void handleRoot(){
 }
 
 void sendHtml(){
-   String light_1 = light_1_On ? "开" : "关";
-  String light_2 = light_2_On ? "开" : "关";
-  char html[1300];
-  snprintf(html, sizeof(html), "%s%s%s%s%s", h1, light_1.c_str(), h2, light_2.c_str(), h3);
+  const char* light_1=light_1_On ? on_str:off_str;
+  const char* light_2=light_2_On ? on_str:off_str;
+  snprintf(html, sizeof(html), "%s%s%s%s%s", h1, light_1, h2, light_2, h3);
  // Serial.println(html);
   Serial.println("Send Html Page");
   server.send(200, "text/html", html);
@@ -148,13 +152,13 @@ void action(String req)
   }
   else if (req.indexOf(LIGHT_1_OFF_PARAMTER) != -1)
   {
-    servo_1.write(ANGLE_OFF);
+    servo_1.write(ANGLE_1_OFF);
     light_1_On = false;
     Serial.println(F("Light 1 off"));
   }
   else if (req.indexOf(LIGHT_2_ON_PARAMTER) != -1)
   {// 舵机2和舵机1安装方向相反
-    servo_2.write(ANGLE_OFF);// 开关角度设置相反
+    servo_2.write(ANGLE_2_OFF);// 开关角度设置相反
     light_2_On = true;
     Serial.println(F("Light 2 on"));
   }
@@ -170,14 +174,14 @@ void action(String req)
   delay(500);
   servo_1.write(ANGLE_NONE);
   delay(500);
-  servo_2.write(ANGLE_OFF);// 开关角度设置相反
+  servo_2.write(ANGLE_2_OFF);// 开关角度设置相反
     light_1_On = true;
     light_2_On = true;
     Serial.println(F("Light All on"));
   }
   else if (req.indexOf(LIGHT_All_OFF_PARAMTER) != -1)
   { 
-    servo_1.write(ANGLE_OFF);
+    servo_1.write(ANGLE_1_OFF);
     servo_2.write(ANGLE_ON);
     light_1_On = false;
     light_2_On = false;
